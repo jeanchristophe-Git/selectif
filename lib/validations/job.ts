@@ -27,4 +27,14 @@ export const jobOfferSchema = z.object({
   expiresAt: z.date().optional(),
 })
 
-export type JobOfferInput = z.infer<typeof jobOfferSchema>
+// Type manuel pour éviter les problèmes avec .default() qui rend le type optionnel
+export type JobOfferInput = {
+  title: string
+  description: string
+  requirements: string
+  location?: string
+  jobType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "FREELANCE"
+  salaryRange?: string
+  interviewSlots: number
+  expiresAt?: Date
+}
