@@ -1,55 +1,107 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { geniuspay } from "@/lib/geniuspay"
+import crypto from "crypto"
 
-// POST - Webhook GeniusPay pour recevoir les notifications de paiement
 export async function POST(req: NextRequest) {
   try {
-    const signature = req.headers.get("x-geniuspay-signature")
     const body = await req.text()
+    const signature = req.headers.get("x-geniuspay-signature")
 
     // Vérifier la signature du webhook
-    if (!signature || !process.env.GENIUSPAY_WEBHOOK_SECRET) {
-      console.error("❌ Webhook signature missing or secret not configured")
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-    }
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.GENIUSPAY_WEBHOOK_SECRET || "")
+      .update(body)
+      .digest("hex")
 
-    const isValid = geniuspay.verifyWebhookSignature(
-      body,
-      signature,
-      process.env.GENIUSPAY_WEBHOOK_SECRET
-    )
-
-    if (!isValid) {
-      console.error("❌ Invalid webhook signature")
-      return NextResponse.json({ message: "Invalid signature" }, { status: 403 })
+    if (signature !== expectedSignature) {
+      console.error("Invalid webhook signature")
+      return NextResponse.json({ message: "Invalid signature" }, { status: 401 })
     }
 
     const event = JSON.parse(body)
 
-    console.log(`📨 Webhook GeniusPay reçu: ${event.type}`)
-    console.log("Payload:", event)
+    console.log("GeniusPay webhook event:", event.type)
 
-    // Traiter les différents types d'événements
-    switch (event.type) {
-      case "payment.success":
-        await handlePaymentSuccess(event.data)
-        break
+    // Gérer les événements de paiement
+    if (event.type === "charge.succeeded") {
+      const { metadata, amount } = event.data
+      const { userId, plan } = metadata
 
-      case "payment.failed":
-        await handlePaymentFailed(event.data)
-        break
+      if (!userId || !plan) {
+        console.error("Missing metadata in webhook:", metadata)
+        return NextResponse.json({ message: "Missing metadata" }, { status: 400 })
+      }
 
-      case "payment.cancelled":
-        await handlePaymentCancelled(event.data)
-        break
+      // Mettre à jour ou créer l'abonnement
+      const existingSubscription = await db.subscription.findUnique({
+        where: { userId },
+      })
 
-      case "payment.initiated":
-        console.log("Payment initiated:", event.data.reference)
-        break
+      const newPeriodEnd = new Date()
+      newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
 
-      default:
-        console.log(`⚠️  Unknown event type: ${event.type}`)
+      if (existingSubscription) {
+        await db.subscription.update({
+          where: { userId },
+          data: {
+            plan,
+            status: "ACTIVE",
+            currentPeriodEnd: newPeriodEnd,
+          },
+        })
+      } else {
+        // Définir les limites selon le plan
+        let maxJobs = 5
+        let maxAppsPerJob = 50
+        let maxAIAnalysesMonth = 20
+        let maxCVs = 1
+        let alertsEnabled = false
+        let cvBuilderEnabled = false
+
+        if (plan === "COMPANY_BUSINESS") {
+          maxJobs = 50
+          maxAppsPerJob = 500
+          maxAIAnalysesMonth = 200
+        } else if (plan === "COMPANY_ENTERPRISE") {
+          maxJobs = 999
+          maxAppsPerJob = 9999
+          maxAIAnalysesMonth = 9999
+        } else if (plan === "CANDIDATE_PREMIUM") {
+          maxCVs = 10
+          alertsEnabled = true
+          cvBuilderEnabled = true
+        }
+
+        await db.subscription.create({
+          data: {
+            userId,
+            plan,
+            status: "ACTIVE",
+            maxJobs,
+            maxAppsPerJob,
+            maxAIAnalysesMonth,
+            maxCVs,
+            alertsEnabled,
+            cvBuilderEnabled,
+            currentPeriodEnd: newPeriodEnd,
+          },
+        })
+      }
+
+      console.log(`✅ Subscription activated for user ${userId} - Plan: ${plan}`)
+    } else if (event.type === "charge.failed") {
+      const { metadata } = event.data
+      const { userId } = metadata
+
+      if (userId) {
+        // Marquer l'abonnement comme PAST_DUE
+        await db.subscription.updateMany({
+          where: { userId },
+          data: { status: "PAST_DUE" },
+        })
+
+        console.log(`⚠️ Payment failed for user ${userId}`)
+      }
     }
 
     return NextResponse.json({ received: true })
@@ -60,157 +112,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-async function handlePaymentSuccess(paymentData: any) {
-  const { reference, amount, metadata } = paymentData
-
-  console.log(`✅ Paiement réussi: ${reference}`)
-
-  // Récupérer la transaction
-  const transaction = await db.transaction.findFirst({
-    where: { paymentReference: reference },
-    include: { user: true },
-  })
-
-  if (!transaction) {
-    console.error(`❌ Transaction introuvable: ${reference}`)
-    return
-  }
-
-  // Mise à jour de la transaction
-  await db.transaction.update({
-    where: { id: transaction.id },
-    data: {
-      status: "COMPLETED",
-      paidAt: new Date(),
-    },
-  })
-
-  // Créer ou mettre à jour l'abonnement
-  const existingSubscription = await db.subscription.findUnique({
-    where: { userId: transaction.userId },
-  })
-
-  const now = new Date()
-  const endDate = new Date()
-  endDate.setMonth(endDate.getMonth() + 1) // 1 mois d'abonnement
-
-  if (existingSubscription) {
-    await db.subscription.update({
-      where: { userId: transaction.userId },
-      data: {
-        plan: transaction.plan,
-        status: "ACTIVE",
-        startDate: now,
-        endDate: endDate,
-        autoRenew: false,
-      },
-    })
-  } else {
-    await db.subscription.create({
-      data: {
-        userId: transaction.userId,
-        plan: transaction.plan,
-        status: "ACTIVE",
-        startDate: now,
-        endDate: endDate,
-        autoRenew: false,
-      },
-    })
-  }
-
-  // Incrémenter l'usage du code promo si utilisé
-  if (metadata?.promoCode) {
-    await db.promoCode.update({
-      where: { code: metadata.promoCode },
-      data: {
-        usageCount: { increment: 1 },
-      },
-    })
-  }
-
-  // Log dans l'audit
-  await db.auditLog.create({
-    data: {
-      userId: transaction.userId,
-      action: "PAYMENT_SUCCESS",
-      entity: "SUBSCRIPTION",
-      entityId: transaction.id,
-      metadata: {
-        reference,
-        amount,
-        plan: transaction.plan,
-      },
-    },
-  })
-
-  console.log(`✅ Abonnement activé pour l'utilisateur ${transaction.userId}`)
-
-  // TODO: Envoyer un email de confirmation
-  // await sendEmail({
-  //   to: transaction.user.email,
-  //   subject: "Abonnement activé - Selectif",
-  //   html: getSubscriptionActivatedEmail(...)
-  // })
-}
-
-async function handlePaymentFailed(paymentData: any) {
-  const { reference } = paymentData
-
-  console.log(`❌ Paiement échoué: ${reference}`)
-
-  const transaction = await db.transaction.findFirst({
-    where: { paymentReference: reference },
-  })
-
-  if (!transaction) {
-    console.error(`❌ Transaction introuvable: ${reference}`)
-    return
-  }
-
-  await db.transaction.update({
-    where: { id: transaction.id },
-    data: { status: "FAILED" },
-  })
-
-  await db.auditLog.create({
-    data: {
-      userId: transaction.userId,
-      action: "PAYMENT_FAILED",
-      entity: "TRANSACTION",
-      entityId: transaction.id,
-      metadata: { reference },
-    },
-  })
-}
-
-async function handlePaymentCancelled(paymentData: any) {
-  const { reference } = paymentData
-
-  console.log(`⚠️  Paiement annulé: ${reference}`)
-
-  const transaction = await db.transaction.findFirst({
-    where: { paymentReference: reference },
-  })
-
-  if (!transaction) {
-    console.error(`❌ Transaction introuvable: ${reference}`)
-    return
-  }
-
-  await db.transaction.update({
-    where: { id: transaction.id },
-    data: { status: "CANCELLED" },
-  })
-
-  await db.auditLog.create({
-    data: {
-      userId: transaction.userId,
-      action: "PAYMENT_CANCELLED",
-      entity: "TRANSACTION",
-      entityId: transaction.id,
-      metadata: { reference },
-    },
-  })
 }
