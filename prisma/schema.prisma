@@ -1,0 +1,544 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Core Models ---
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String // Hashed password
+  emailVerified       Boolean   @default(false)
+  name                String?
+  image               String?
+  userType            String // COMPANY ou CANDIDATE
+  role                String    @default("USER") // USER ou ADMIN
+  onboardingCompleted Boolean   @default(false)
+  suspended           Boolean   @default(false)
+  suspendedAt         DateTime?
+  suspensionReason    String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  sessions       Session[]
+  accounts       Account[]
+  company        Company?
+  candidate      Candidate?
+  subscription   Subscription?
+  notifications  Notification[]
+  supportTickets SupportTicket[]
+
+  @@index([email])
+  @@index([userType])
+  @@index([role])
+}
+
+// Better Auth session management
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                String    @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  refreshToken      String?   @db.Text
+  accessToken       String?   @db.Text
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// --- Company Profile ---
+
+model Company {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  companyName    String
+  companySize    String?
+  industry       String?
+  website        String?
+  description    String?   @db.Text
+  logo           String?
+  location       String?
+  onboardingStep Int       @default(0)
+  onboardedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobOffers JobOffer[]
+
+  @@index([userId])
+  @@index([companyName])
+}
+
+// --- Candidate Profile ---
+
+model Candidate {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  firstName      String
+  lastName       String
+  phone          String?
+  linkedinUrl    String?
+  portfolioUrl   String?
+  bio            String?   @db.Text
+  onboardingStep Int       @default(0)
+  onboardedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+  cvs          CV[]
+
+  @@index([userId])
+  @@index([lastName, firstName])
+}
+
+// --- CV Builder ---
+
+model CV {
+  id          String   @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // Informations personnelles
+  fullName String
+  email    String
+  phone    String?
+  location String?
+  title    String? // Titre professionnel
+  summary  String? @db.Text // Résumé professionnel
+
+  // Expériences (JSON)
+  experience Json? @default("[]")
+  // Structure: [{ id, company, position, startDate, endDate, current, description }]
+
+  // Formation (JSON)
+  education Json? @default("[]")
+  // Structure: [{ id, school, degree, field, startDate, endDate, current }]
+
+  // Compétences (JSON)
+  skills Json? @default("[]")
+  // Structure: [{ id, name, level }]
+
+  // Langues (JSON)
+  languages Json? @default("[]")
+  // Structure: [{ id, language, level }]
+
+  // Métadonnées
+  isDefault Boolean  @default(false) // CV par défaut du candidat
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@index([isDefault])
+}
+
+// --- Job Offers ---
+
+model JobOffer {
+  id             String         @id @default(cuid())
+  companyId      String
+  title          String
+  description    String         @db.Text
+  requirements   String         @db.Text
+  location       String?
+  jobType        JobType        @default(FULL_TIME)
+  salaryRange    String?
+  interviewSlots Int            @default(5)
+  status         JobOfferStatus @default(DRAFT)
+  publicId       String         @unique @default(cuid())
+  viewCount      Int            @default(0)
+  expiresAt      DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([companyId])
+  @@index([publicId])
+  @@index([status])
+  @@index([publishedAt])
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+
+enum JobOfferStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+// --- Applications ---
+
+model Application {
+  id          String  @id @default(cuid())
+  jobOfferId  String
+  candidateId String?
+
+  // Guest applicant info (if not registered)
+  guestEmail     String?
+  guestFirstName String?
+  guestLastName  String?
+  guestPhone     String?
+
+  // Application content
+  cvData           Bytes
+  cvFileName       String
+  cvFileSize       Int
+  cvMimeType       String
+  motivationLetter String @db.Text
+
+  // AI Analysis
+  aiScore       Float?
+  aiAnalysis    String?   @db.Text
+  aiProcessedAt DateTime?
+  aiError       String?   @db.Text
+
+  // Status tracking
+  status        ApplicationStatus @default(PENDING)
+  rank          Int?
+  isShortlisted Boolean           @default(false)
+
+  // GDPR compliance
+  consentGiven       Boolean   @default(false)
+  dataRetentionUntil DateTime
+  deletedAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobOffer  JobOffer   @relation(fields: [jobOfferId], references: [id], onDelete: Cascade)
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@unique([jobOfferId, candidateId])
+  @@index([jobOfferId])
+  @@index([candidateId])
+  @@index([status])
+  @@index([aiScore])
+  @@index([dataRetentionUntil])
+  @@index([createdAt])
+}
+
+enum ApplicationStatus {
+  PENDING
+  ANALYZING
+  ANALYZED
+  SHORTLISTED
+  REJECTED
+  CONTACTED
+  WITHDRAWN
+}
+
+// --- Notifications ---
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  NEW_APPLICATION
+  AI_ANALYSIS_COMPLETE
+  SHORTLIST_UPDATED
+  JOB_PUBLISHED
+  APPLICATION_STATUS_CHANGED
+}
+
+// --- System Logs ---
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// --- SaaS Subscriptions & Billing ---
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan   SubscriptionPlan   @default(COMPANY_FREE)
+  status SubscriptionStatus @default(ACTIVE)
+
+  // Limites entreprises
+  maxJobs            Int @default(5) // 5 pour FREE
+  maxAppsPerJob      Int @default(50) // 50 pour FREE
+  maxAIAnalysesMonth Int @default(20) // 20 pour FREE
+
+  // Limites candidats
+  maxCVs           Int     @default(1) // 1 pour FREE
+  alertsEnabled    Boolean @default(false)
+  cvBuilderEnabled Boolean @default(false)
+
+  // Compteurs (reset mensuel)
+  currentJobs   Int      @default(0)
+  currentAIUses Int      @default(0)
+  lastResetAt   DateTime @default(now())
+
+  // Paiement Stripe
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  // Code promo
+  promoCodeUsed   String?
+  discountPercent Int     @default(0)
+  discountFixed   Float?
+
+  // Dates
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime
+  canceledAt         DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([plan])
+  @@index([status])
+  @@index([stripeCustomerId])
+}
+
+enum SubscriptionPlan {
+  // Entreprises
+  COMPANY_FREE
+  COMPANY_BUSINESS
+  COMPANY_ENTERPRISE
+
+  // Candidats
+  CANDIDATE_FREE
+  CANDIDATE_PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  PAUSED
+}
+
+model PromoCode {
+  id   String @id @default(cuid())
+  code String @unique
+
+  // Type de réduction
+  type  PromoType
+  value Float // Pourcentage ou montant ou nombre de mois
+
+  // Application
+  applicableTo String // "ALL", "COMPANY", "CANDIDATE", "BUSINESS_ONLY"
+
+  // Limites
+  maxUses     Int? // null = illimité
+  currentUses Int       @default(0)
+  expiresAt   DateTime?
+  active      Boolean   @default(true)
+
+  // Métadata
+  description String?
+  createdBy   String? // Admin userId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([active])
+}
+
+enum PromoType {
+  PERCENTAGE // -50%
+  FIXED_AMOUNT // -10€
+  FREE_MONTHS // 2 mois gratuits
+  FREE_TRIAL // Extended trial
+}
+
+// Promotions sur les plans (affichées sur la landing page)
+model PricingPromotion {
+  id          String   @id @default(cuid())
+  plan        SubscriptionPlan // Plan concerné
+
+  // Réduction
+  discountPercent Int // Pourcentage de réduction (ex: 20 pour -20%)
+
+  // Affichage
+  label       String? // Ex: "Offre de lancement", "Black Friday"
+  active      Boolean @default(true)
+
+  // Période
+  validFrom   DateTime?
+  validUntil  DateTime?
+
+  // Métadata
+  createdBy   String? // Admin userId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([plan])
+  @@index([active])
+}
+
+model EmailCampaign {
+  id      String @id @default(cuid())
+  title   String
+  subject String
+  body    String @db.Text
+
+  // Destinataires
+  recipients     CampaignRecipients
+  filterPlan     String? // "BUSINESS", "FREE", etc
+  filterUserType String? // "COMPANY", "CANDIDATE"
+
+  // Status
+  status CampaignStatus @default(DRAFT)
+
+  // Stats
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  totalSent    Int       @default(0)
+  totalOpened  Int       @default(0)
+  totalClicked Int       @default(0)
+
+  // Métadata
+  createdBy String // Admin userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+enum CampaignRecipients {
+  ALL
+  ALL_COMPANIES
+  ALL_CANDIDATES
+  FREE_COMPANIES
+  PAID_COMPANIES
+  PREMIUM_CANDIDATES
+  CUSTOM
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+model AdminNotification {
+  id        String   @id @default(cuid())
+  type      String // "MODERATION", "PAYMENT_FAILED", "SYSTEM_ERROR", "USER_REPORT"
+  title     String
+  message   String   @db.Text
+  severity  String   @default("INFO") // "INFO", "WARNING", "ERROR", "CRITICAL"
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([read])
+  @@index([createdAt])
+  @@index([severity])
+}
+
+model SupportTicket {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  category    String // BUG, HELP, FEATURE, CONTACT
+  subject     String
+  description String @db.Text
+  priority    String @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  status      String @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+
+  // Métadonnées techniques
+  userAgent  String?
+  currentUrl String?
+  metadata   Json?   @default("{}")
+
+  // Gestion
+  assignedTo String?
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model SystemSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}

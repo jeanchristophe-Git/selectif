@@ -1,0 +1,21 @@
+⚠️  SECURITY NOTICE ⚠️
+
+This application contains an admin panel with an intentionally obscure URL path.
+
+NEVER COMMIT OR SHARE:
+- The admin login URL path
+- Admin credentials
+- .env files containing ADMIN_LOGIN_PATH
+
+The admin path is currently set to a random hex value to avoid detection by
+automated scanners and brute force attacks.
+
+For production deployment:
+1. Generate a NEW random path using: node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+2. Update the folder name in app/
+3. Update ADMIN_LOGIN_PATH in .env
+4. Implement server-side rate limiting
+5. Enable IP-based monitoring
+6. Set up alerts for failed login attempts
+
+See ADMIN_ACCESS.md for full security documentation.
