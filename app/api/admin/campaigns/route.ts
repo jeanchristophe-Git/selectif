@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         users = await db.user.findMany({
           where: {
             userType: "COMPANY",
-            subscription: { is: { plan: { equals: "FREE" } } }
+            subscription: { is: { plan: "COMPANY_FREE" } }
           },
           select: { id: true, email: true, name: true },
         })
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
           where: {
             userType: "COMPANY",
             subscription: {
-              is: { plan: { in: ["BUSINESS", "ENTERPRISE"] } }
+              is: { plan: { in: ["COMPANY_BUSINESS", "COMPANY_ENTERPRISE"] } }
             }
           },
           select: { id: true, email: true, name: true },
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         users = await db.user.findMany({
           where: {
             userType: "CANDIDATE",
-            subscription: { is: { plan: { equals: "CANDIDATE_PREMIUM" } } }
+            subscription: { is: { plan: "CANDIDATE_PREMIUM" } }
           },
           select: { id: true, email: true, name: true },
         })
