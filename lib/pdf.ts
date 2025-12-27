@@ -1,4 +1,5 @@
-import pdfParse from "pdf-parse/lib/pdf-parse.js"
+// @ts-ignore - pdf-parse doesn't have proper types
+const pdfParse = require("pdf-parse")
 
 /**
  * Extract text content from a PDF buffer

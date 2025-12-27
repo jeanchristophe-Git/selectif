@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth-utils"
-import pdfParse from "pdf-parse/lib/pdf-parse.js"
+
+// @ts-ignore - pdf-parse doesn't have proper types
+const pdfParse = require("pdf-parse")
 
 // POST - Parser un CV PDF et extraire le texte
 export async function POST(req: NextRequest) {
