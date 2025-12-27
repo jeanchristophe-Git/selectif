@@ -90,7 +90,7 @@ export async function POST(
 
     try {
       // Extract text from PDF
-      const cvText = await extractTextFromPDF(application.cvData)
+      const cvText = await extractTextFromPDF(Buffer.from(application.cvData))
 
       if (!cvText || cvText.trim().length === 0) {
         throw new Error("Impossible d'extraire le texte du CV")

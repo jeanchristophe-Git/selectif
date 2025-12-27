@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       email: sessionUser.email,
       name: sessionUser.name,
       userType: sessionUser.userType,
+      role: sessionUser.role,
       onboardingCompleted: true,
     })
 
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: "Données invalides", errors: error.errors },
+        { message: "Données invalides", errors: error.issues },
         { status: 400 }
       )
     }

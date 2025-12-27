@@ -99,7 +99,7 @@ export async function PUT(req: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: "Données invalides", errors: error.errors },
+        { message: "Données invalides", errors: error.issues },
         { status: 400 }
       )
     }

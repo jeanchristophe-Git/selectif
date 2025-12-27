@@ -81,7 +81,7 @@ export async function GET(
     const filename = `CV_${candidateName.replace(/\s+/g, "_")}.pdf`
 
     // Return PDF with appropriate headers
-    return new NextResponse(application.cvData, {
+    return new NextResponse(Buffer.from(application.cvData), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
