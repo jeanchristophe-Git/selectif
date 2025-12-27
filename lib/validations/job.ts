@@ -22,19 +22,8 @@ export const jobOfferSchema = z.object({
     .number()
     .int()
     .min(1, "Au moins 1 slot d'entretien est requis")
-    .max(50, "Maximum 50 slots d'entretiens")
-    .default(5),
+    .max(50, "Maximum 50 slots d'entretiens"),
   expiresAt: z.date().optional(),
 })
 
-// Type manuel pour éviter les problèmes avec .default() qui rend le type optionnel
-export type JobOfferInput = {
-  title: string
-  description: string
-  requirements: string
-  location?: string
-  jobType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "FREELANCE"
-  salaryRange?: string
-  interviewSlots: number
-  expiresAt?: Date
-}
+export type JobOfferInput = z.infer<typeof jobOfferSchema>
