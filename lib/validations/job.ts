@@ -23,6 +23,7 @@ export const jobOfferSchema = z.object({
     .int()
     .min(1, "Au moins 1 slot d'entretien est requis")
     .max(50, "Maximum 50 slots d'entretiens")
+    .optional()
     .default(5),
   expiresAt: z.date().optional(),
 })
