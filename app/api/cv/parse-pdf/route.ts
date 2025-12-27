@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth-utils"
-import pdf from "pdf-parse"
+import pdfParse from "pdf-parse/lib/pdf-parse.js"
 
 // POST - Parser un CV PDF et extraire le texte
 export async function POST(req: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     // Parser le PDF
-    const data = await pdf(buffer)
+    const data = await pdfParse(buffer)
 
     // Extraire le texte
     const cvText = data.text
