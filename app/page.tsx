@@ -18,6 +18,7 @@ import Image from "next/image"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { PricingSection } from "@/components/landing/pricing-section"
 import { GridBackground } from "@/components/ui/grid-background"
+import { PLAN_LIMITS } from "@/lib/subscription"
 
 export default function Home() {
   const [userType, setUserType] = useState<"company" | "candidate">("company")
