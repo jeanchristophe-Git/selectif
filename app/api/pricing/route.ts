@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
         plan: planData.plan,
         displayName: planData.name,
         price: planData.price,
-        originalPrice: planData.originalPrice,
+        originalPrice: 'originalPrice' in planData ? planData.originalPrice : planData.price,
         hasPromotion: planData.hasPromotion,
         billingPeriod: planData.billingPeriod,
       })
