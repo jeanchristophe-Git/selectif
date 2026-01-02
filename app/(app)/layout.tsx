@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   Bell,
   PenTool,
+  Heart,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -206,6 +207,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               )
             })}
+
+            {/* Donation Link - Always visible for all users */}
+            <div className="pt-2 mt-2 border-t">
+              <Link
+                href="/donate"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === "/donate"
+                    ? "bg-pink-100 dark:bg-pink-900/20 text-pink-600"
+                    : "text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/10"
+                )}
+              >
+                <Heart className="h-5 w-5 fill-pink-600" />
+                Soutenir Selectif
+              </Link>
+            </div>
           </nav>
 
           {/* User menu at bottom */}
