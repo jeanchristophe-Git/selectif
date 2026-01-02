@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth-utils"
 
-// @ts-ignore - pdf-parse doesn't have proper types
-const pdfParse = require("pdf-parse")
-
 // POST - Parser un CV PDF et extraire le texte
 export async function POST(req: NextRequest) {
   try {
@@ -42,6 +39,10 @@ export async function POST(req: NextRequest) {
     // Convertir le fichier en buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
+
+    // Dynamic import to avoid loading pdf-parse during build time
+    // @ts-ignore - pdf-parse doesn't have proper types
+    const pdfParse = (await import("pdf-parse")).default
 
     // Parser le PDF
     const data = await pdfParse(buffer)
