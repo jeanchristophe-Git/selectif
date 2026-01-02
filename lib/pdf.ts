@@ -1,6 +1,3 @@
-// @ts-ignore - pdf-parse doesn't have proper types
-const pdfParse = require("pdf-parse")
-
 /**
  * Extract text content from a PDF buffer
  * @param buffer - PDF file as Buffer (from database Bytes field)
@@ -8,6 +5,9 @@ const pdfParse = require("pdf-parse")
  */
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    // Dynamic import to avoid loading pdf-parse during build time
+    // @ts-ignore - pdf-parse doesn't have proper types
+    const pdfParse = (await import("pdf-parse")).default
     const data = await pdfParse(buffer)
     return data.text
   } catch (error) {
