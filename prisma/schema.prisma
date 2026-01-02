@@ -31,6 +31,7 @@ model User {
   company        Company?
   candidate      Candidate?
   subscription   Subscription?
+  donations      Donation[]
   notifications  Notification[]
   supportTickets SupportTicket[]
 
@@ -123,7 +124,7 @@ model Candidate {
 // --- CV Builder ---
 
 model CV {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
@@ -315,41 +316,38 @@ model Subscription {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  plan   SubscriptionPlan   @default(COMPANY_FREE)
+  plan   SubscriptionPlan   @default(FREE)
   status SubscriptionStatus @default(ACTIVE)
 
-  // Limites entreprises
-  maxJobs            Int @default(5) // 5 pour FREE
-  maxAppsPerJob      Int @default(50) // 50 pour FREE
-  maxAIAnalysesMonth Int @default(20) // 20 pour FREE
+  // Donations et Badges
+  donorBadge   String? // "SUPPORTER", "GENEROUS", "FOUNDING"
+  totalDonated Float   @default(0) // Montant total des donations en FCFA
 
-  // Limites candidats
-  maxCVs           Int     @default(1) // 1 pour FREE
-  alertsEnabled    Boolean @default(false)
-  cvBuilderEnabled Boolean @default(false)
+  // DEPRECATED: Champs gardés pour compatibilité migration
+  // Ces champs ne sont plus utilisés mais conservés pour éviter la perte de données
+  maxJobs            Int      @default(999999)
+  maxAppsPerJob      Int      @default(999999)
+  maxAIAnalysesMonth Int      @default(999999)
+  maxCVs             Int      @default(999)
+  alertsEnabled      Boolean  @default(true)
+  cvBuilderEnabled   Boolean  @default(true)
+  currentJobs        Int      @default(0)
+  currentAIUses      Int      @default(0)
+  lastResetAt        DateTime @default(now())
 
-  // Compteurs (reset mensuel)
-  currentJobs   Int      @default(0)
-  currentAIUses Int      @default(0)
-  lastResetAt   DateTime @default(now())
-
-  // Paiement Stripe
+  // DEPRECATED: Champs de paiement legacy
   stripeCustomerId       String?
   stripeSubscriptionId   String?
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
-
-  // Code promo
-  promoCodeUsed   String?
-  discountPercent Int     @default(0)
-  discountFixed   Float?
-
-  // Dates
-  trialEndsAt        DateTime?
-  currentPeriodStart DateTime  @default(now())
-  currentPeriodEnd   DateTime
-  canceledAt         DateTime?
-  cancelAtPeriodEnd  Boolean   @default(false)
+  promoCodeUsed          String?
+  discountPercent        Int       @default(0)
+  discountFixed          Float?
+  trialEndsAt            DateTime?
+  currentPeriodStart     DateTime  @default(now())
+  currentPeriodEnd       DateTime?
+  canceledAt             DateTime?
+  cancelAtPeriodEnd      Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -357,18 +355,37 @@ model Subscription {
   @@index([userId])
   @@index([plan])
   @@index([status])
-  @@index([stripeCustomerId])
+}
+
+// Modèle Donation pour tracker les contributions
+model Donation {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount   Float  @default(0) // Montant en FCFA
+  currency String @default("XOF") // Code devise (FCFA)
+
+  // Intégration GeniusPay
+  geniuspayReference String? @unique
+  geniuspayStatus    String? // pending, succeeded, failed
+
+  status String @default("PENDING") // PENDING, COMPLETED, FAILED
+
+  message     String? // Message optionnel du donateur
+  isAnonymous Boolean   @default(false) // Si true, ne pas afficher dans liste publique
+  completedAt DateTime? // Date de complétion
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 enum SubscriptionPlan {
-  // Entreprises
-  COMPANY_FREE
-  COMPANY_BUSINESS
-  COMPANY_ENTERPRISE
-
-  // Candidats
-  CANDIDATE_FREE
-  CANDIDATE_PREMIUM
+  FREE // Un seul plan gratuit pour tous
 }
 
 enum SubscriptionStatus {
@@ -416,24 +433,24 @@ enum PromoType {
 
 // Promotions sur les plans (affichées sur la landing page)
 model PricingPromotion {
-  id          String   @id @default(cuid())
-  plan        SubscriptionPlan // Plan concerné
+  id   String           @id @default(cuid())
+  plan SubscriptionPlan // Plan concerné
 
   // Réduction
   discountPercent Int // Pourcentage de réduction (ex: 20 pour -20%)
 
   // Affichage
-  label       String? // Ex: "Offre de lancement", "Black Friday"
-  active      Boolean @default(true)
+  label  String? // Ex: "Offre de lancement", "Black Friday"
+  active Boolean @default(true)
 
   // Période
-  validFrom   DateTime?
-  validUntil  DateTime?
+  validFrom  DateTime?
+  validUntil DateTime?
 
   // Métadata
-  createdBy   String? // Admin userId
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdBy String? // Admin userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([plan])
   @@index([active])
