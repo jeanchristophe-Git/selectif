@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications"
 import { sendEmail, getNewApplicationEmailForCompany, getApplicationConfirmationEmailForCandidate } from "@/lib/email"
-import { canReceiveApplication } from "@/lib/subscription"
 
 export async function POST(
   req: NextRequest,
@@ -23,15 +22,6 @@ export async function POST(
       return NextResponse.json(
         { message: "Offre non trouvée ou non publiée" },
         { status: 404 }
-      )
-    }
-
-    // Check if job offer can receive more applications
-    const limitCheck = await canReceiveApplication(jobOffer.id)
-    if (!limitCheck.allowed) {
-      return NextResponse.json(
-        { message: limitCheck.reason },
-        { status: 400 }
       )
     }
 

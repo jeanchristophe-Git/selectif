@@ -13,19 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Building2, MapPin, Search, Globe, Lock, Sparkles, ExternalLink, Filter } from "lucide-react"
+import { Building2, MapPin, Search, Globe, ExternalLink, Filter } from "lucide-react"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { toast } from "sonner"
 import { useSessionZustand } from "@/lib/use-session-zustand"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
 import { JobsListSkeleton } from "@/components/ui/skeletons"
 import { useMinimumLoading } from "@/lib/use-minimum-loading"
 
@@ -65,7 +57,6 @@ export default function JobsAvailablePage() {
   const [searchingExternal, setSearchingExternal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [externalSearchQuery, setExternalSearchQuery] = useState("")
-  const [showPremiumDialog, setShowPremiumDialog] = useState(false)
   const [activeTab, setActiveTab] = useState("selectif")
 
   // Filtres pour la recherche Internet
@@ -73,12 +64,6 @@ export default function JobsAvailablePage() {
   const [jobType, setJobType] = useState("all")
   const [experienceLevel, setExperienceLevel] = useState("all")
   const [datePosted, setDatePosted] = useState("all")
-
-  // Vérifier si l'utilisateur a accès à la recherche internet
-  const hasInternetSearchAccess =
-    (user?.subscription?.plan === 'CANDIDATE_PREMIUM' ||
-     user?.subscription?.plan === 'COMPANY_BUSINESS' ||
-     user?.subscription?.plan === 'COMPANY_ENTERPRISE') || false
 
   useEffect(() => {
     fetchJobs()
@@ -101,11 +86,6 @@ export default function JobsAvailablePage() {
   }
 
   const searchExternalJobs = async () => {
-    if (!hasInternetSearchAccess) {
-      setShowPremiumDialog(true)
-      return
-    }
-
     if (!externalSearchQuery.trim()) {
       toast.error("Veuillez entrer un mot-clé de recherche")
       return
@@ -141,10 +121,6 @@ export default function JobsAvailablePage() {
   }
 
   const handleTabChange = (value: string) => {
-    if (value === "internet" && !hasInternetSearchAccess) {
-      setShowPremiumDialog(true)
-      return
-    }
     setActiveTab(value)
   }
 
@@ -179,15 +155,9 @@ export default function JobsAvailablePage() {
             <Building2 className="h-4 w-4 mr-2" />
             Offres Selectif
           </TabsTrigger>
-          <TabsTrigger value="internet" className="relative">
+          <TabsTrigger value="internet">
             <Globe className="h-4 w-4 mr-2" />
             Recherche Internet
-            {!hasInternetSearchAccess && (
-              <Lock className="h-3 w-3 ml-1 text-yellow-600" />
-            )}
-            {!hasInternetSearchAccess && (
-              <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>
-            )}
           </TabsTrigger>
         </TabsList>
 
@@ -274,27 +244,7 @@ export default function JobsAvailablePage() {
 
         {/* Onglet Recherche Internet */}
         <TabsContent value="internet" className="space-y-4">
-          {!hasInternetSearchAccess ? (
-            <Card className="border-dashed border-2">
-              <CardContent className="flex min-h-[400px] flex-col items-center justify-center py-12">
-                <div className="rounded-full bg-yellow-100 dark:bg-yellow-900/20 p-4 mb-4">
-                  <Lock className="h-12 w-12 text-yellow-600" />
-                </div>
-                <h3 className="mt-4 text-xl font-semibold">Fonctionnalité Premium</h3>
-                <p className="mt-2 text-center text-sm text-muted-foreground max-w-md">
-                  La recherche d'offres sur Internet est réservée aux membres Premium. Accédez à des milliers d'offres depuis LinkedIn, Indeed, Glassdoor et plus encore.
-                </p>
-                <div className="flex gap-2 mt-6">
-                  <Button onClick={() => setShowPremiumDialog(true)} className="gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Passer à Premium
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Search Bar */}
+          {/* Search Bar */}
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -443,73 +393,8 @@ export default function JobsAvailablePage() {
                   ))}
                 </div>
               )}
-            </>
-          )}
         </TabsContent>
       </Tabs>
-
-      {/* Premium Dialog */}
-      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-yellow-600" />
-              Passez à Premium
-            </DialogTitle>
-            <DialogDescription>
-              Débloquez la recherche d'offres sur Internet et bien plus encore
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-1">
-                  <Globe className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Recherche sur Internet</p>
-                  <p className="text-xs text-muted-foreground">
-                    Accédez à des milliers d'offres depuis LinkedIn, Indeed, Glassdoor
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-1">
-                  <Sparkles className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">50 analyses IA par mois</p>
-                  <p className="text-xs text-muted-foreground">
-                    Optimisez vos candidatures avec l'IA
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-purple-100 dark:bg-purple-900/20 p-1">
-                  <Building2 className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Support prioritaire</p>
-                  <p className="text-xs text-muted-foreground">
-                    Assistance rapide et personnalisée
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPremiumDialog(false)}>
-              Plus tard
-            </Button>
-            <Button asChild className="gap-2">
-              <a href="/dashboard/settings/billing">
-                <Sparkles className="h-4 w-4" />
-                Voir les plans
-              </a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

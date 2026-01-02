@@ -5,7 +5,6 @@ import { extractTextFromPDF } from "@/lib/pdf"
 import { analyzeCVWithAI } from "@/lib/groq"
 import { createNotification } from "@/lib/notifications"
 import { sendEmail, getAIAnalysisCompleteEmailForCompany } from "@/lib/email"
-import { canUseAIAnalysis, incrementAIUsage } from "@/lib/subscription"
 
 export async function POST(
   req: NextRequest,
@@ -61,15 +60,6 @@ export async function POST(
     if (application.jobOffer.companyId !== user.company.id) {
       return NextResponse.json(
         { message: "Accès non autorisé" },
-        { status: 403 }
-      )
-    }
-
-    // Check subscription limits for AI analysis
-    const limitCheck = await canUseAIAnalysis(sessionUser.id)
-    if (!limitCheck.allowed) {
-      return NextResponse.json(
-        { message: limitCheck.reason },
         { status: 403 }
       )
     }
@@ -151,9 +141,6 @@ export async function POST(
         subject: companyEmail.subject,
         html: companyEmail.html,
       })
-
-      // Increment AI usage counter
-      await incrementAIUsage(sessionUser.id)
 
       return NextResponse.json({
         success: true,

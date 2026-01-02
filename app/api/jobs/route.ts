@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth-utils"
 import { db } from "@/lib/db"
 import { jobOfferSchema } from "@/lib/validations/job"
-import { canCreateJob } from "@/lib/subscription"
 import { z } from "zod"
 
 export async function POST(req: NextRequest) {
@@ -28,15 +27,6 @@ export async function POST(req: NextRequest) {
     if (!user?.company) {
       return NextResponse.json(
         { message: "Profil entreprise requis" },
-        { status: 403 }
-      )
-    }
-
-    // Check subscription limits
-    const limitCheck = await canCreateJob(sessionUser.id)
-    if (!limitCheck.allowed) {
-      return NextResponse.json(
-        { message: limitCheck.reason },
         { status: 403 }
       )
     }
