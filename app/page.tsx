@@ -32,9 +32,9 @@ export default function Home() {
 
         {/* --- HEADER --- */}
         <header className="relative z-50 flex justify-center sticky top-0 backdrop-blur-md border-b border-border/40 bg-background/95">
-          <nav className="flex items-center justify-between w-full max-w-7xl px-6 md:px-12 py-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group">
+          <nav className="grid grid-cols-3 items-center w-full max-w-7xl px-6 md:px-12 py-4">
+            {/* Logo - Left */}
+            <Link href="/" className="flex items-center gap-2 group justify-self-start">
               <div className="relative w-10 h-10">
                 <Image
                   src="/logo.svg"
@@ -46,24 +46,24 @@ export default function Home() {
               <span className="font-bold text-lg tracking-tight hidden md:block text-foreground">SELECTIF</span>
             </Link>
 
-            {/* Nav */}
-            <div className="hidden md:flex items-center gap-1 bg-muted/50 border border-border backdrop-blur-xl px-2 py-1.5 rounded-full shadow-lg">
+            {/* Nav - Center */}
+            <div className="hidden md:flex items-center gap-1 bg-muted/50 border border-border backdrop-blur-xl px-2 py-1.5 rounded-full shadow-lg justify-self-center">
               <Link href="#produit" className="px-6 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-full transition-all duration-300">
                 Produit
               </Link>
               <Link href="#methode" className="px-6 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-full transition-all duration-300">
                 Méthode
               </Link>
-              <a href="#tarifs" className="px-6 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-full transition-all duration-300">
-                Tarifs
+              <a href="#soutien" className="px-6 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-full transition-all duration-300">
+                Soutien
               </a>
               <Link href="#faq" className="px-6 py-2.5 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-full transition-all duration-300">
                 FAQ
               </Link>
             </div>
 
-            {/* CTA */}
-            <div className="flex gap-4 items-center">
+            {/* CTA - Right */}
+            <div className="flex gap-4 items-center justify-self-end">
               <ThemeToggle />
               <Link href="/login">
                 <Button variant="ghost" className="text-sm font-medium hidden sm:block text-foreground">
