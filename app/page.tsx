@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
-import { PricingSection } from "@/components/landing/pricing-section"
+import { SupportSection } from "@/components/landing/support-section"
 import { GridBackground } from "@/components/ui/grid-background"
 import { PLAN_LIMITS } from "@/lib/subscription"
 
@@ -428,38 +428,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* --- PRICING SECTION --- */}
-          <div id="tarifs" className="w-full max-w-6xl mb-20 px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Simple. Transparent.</h2>
-              <p className="text-muted-foreground text-lg mb-8">Choisissez le plan qui correspond à vos besoins</p>
-
-              {/* Toggle Entreprise/Candidat */}
-              <div className="inline-flex items-center gap-1 bg-muted border border-border p-1.5 rounded-full">
-                <button
-                  onClick={() => setUserType("company")}
-                  className={`px-8 py-3 text-sm font-medium rounded-full transition-all duration-300 ${
-                    userType === "company"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Entreprises
-                </button>
-                <button
-                  onClick={() => setUserType("candidate")}
-                  className={`px-8 py-3 text-sm font-medium rounded-full transition-all duration-300 ${
-                    userType === "candidate"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Candidats
-                </button>
-              </div>
-            </div>
-
-            <PricingSection userType={userType} />
+          {/* --- SUPPORT SECTION --- */}
+          <div id="soutien" className="w-full max-w-6xl mb-20 px-4">
+            <SupportSection />
             {false && userType === "company" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* FREE */}

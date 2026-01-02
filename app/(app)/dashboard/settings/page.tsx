@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Loader2, Check, Sparkles, Zap, Crown } from "lucide-react"
+import { Loader2, Check, Sparkles, Zap, Crown, Heart, Calendar } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { SettingsPageSkeleton } from "@/components/ui/skeletons"
 import { useMinimumLoading } from "@/lib/use-minimum-loading"
+import { DonorBadge } from "@/components/ui/donor-badge"
+import { DonorBadgeType } from "@/lib/donations"
 
 interface CandidateProfile {
   firstName: string
@@ -55,8 +57,8 @@ export default function SettingsPage() {
   const router = useRouter()
   const [profileData, setProfileData] = useState<CandidateProfile | CompanyProfile | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [promoCode, setPromoCode] = useState("")
-  const [applyingPromo, setApplyingPromo] = useState(false)
+  const [donations, setDonations] = useState<any[]>([])
+  const [donationStats, setDonationStats] = useState<{ totalDonated: number } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const showLoading = useMinimumLoading(loading || isLoading, 800)
   const [isSaving, setIsSaving] = useState(false)
@@ -73,6 +75,7 @@ export default function SettingsPage() {
     if (user) {
       fetchProfile()
       fetchSubscription()
+      fetchDonations()
     }
   }, [user, loading])
 
@@ -88,7 +91,24 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchDonations = async () => {
+    try {
+      const res = await fetch("/api/donations/history")
+      if (res.ok) {
+        const data = await res.json()
+        setDonations(data.donations || [])
+        setDonationStats({ totalDonated: data.totalDonated || 0 })
+      }
+    } catch (error) {
+      console.error("Failed to fetch donations:", error)
+    }
+  }
+
   const applyPromo = async () => {
+    toast.error("Les codes promo ne sont plus disponibles. Selectif est désormais gratuit pour tous !")
+    return
+
+    /* Code promo désactivé
     if (!promoCode.trim()) {
       toast.error("Veuillez entrer un code promo")
       return
@@ -208,7 +228,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Profil</TabsTrigger>
-          <TabsTrigger value="subscription">Abonnement</TabsTrigger>
+          <TabsTrigger value="donations">Mes Donations</TabsTrigger>
           <TabsTrigger value="account">Compte</TabsTrigger>
         </TabsList>
 
@@ -377,213 +397,164 @@ export default function SettingsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="subscription" className="space-y-4">
-          {subscription ? (
-            <>
-              {/* Current Plan */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${
-                        subscription.plan.includes("ENTERPRISE")
-                          ? "from-purple-600 to-pink-600"
-                          : subscription.plan.includes("BUSINESS") || subscription.plan.includes("PREMIUM")
-                          ? "from-blue-600 to-cyan-600"
-                          : "from-gray-600 to-gray-800"
-                      } flex items-center justify-center`}>
-                        {subscription.plan.includes("ENTERPRISE") ? (
-                          <Crown className="w-6 h-6 text-white" />
-                        ) : subscription.plan.includes("BUSINESS") || subscription.plan.includes("PREMIUM") ? (
-                          <Zap className="w-6 h-6 text-white" />
-                        ) : (
-                          <Sparkles className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <CardTitle>{subscription.planName}</CardTitle>
-                        <CardDescription>
-                          {subscription.price === 0 ? "Gratuit" : `${subscription.price}€/mois`}
-                          {subscription.discountPercent > 0 && (
-                            <span className="ml-2 text-green-600">
-                              -{subscription.discountPercent}%
-                            </span>
-                          )}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge variant={subscription.status === "ACTIVE" ? "default" : "secondary"} className="capitalize">
-                      {subscription.status.toLowerCase()}
-                    </Badge>
+        <TabsContent value="donations" className="space-y-4">
+          {/* Donor Status */}
+          <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-white dark:from-pink-950/10 dark:to-background">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-600 to-red-600 flex items-center justify-center">
+                    <Heart className="w-6 h-6 text-white fill-white" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Features */}
                   <div>
-                    <p className="text-sm font-medium mb-2">Fonctionnalités</p>
-                    <ul className="space-y-2">
-                      {subscription.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm">
-                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Usage Stats (Only for companies) */}
-                  {isCompany && (
-                    <div className="space-y-4 pt-4 border-t">
-                      <p className="text-sm font-medium">Utilisation</p>
-
-                      {/* Jobs */}
-                      <div>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-muted-foreground">Offres actives</span>
-                          <span className="font-medium">
-                            {subscription.currentJobs} / {subscription.maxJobs === 999999 ? "∞" : subscription.maxJobs}
-                          </span>
-                        </div>
-                        {subscription.maxJobs !== 999999 && (
-                          <Progress value={(subscription.currentJobs / subscription.maxJobs) * 100} className="h-2" />
-                        )}
-                      </div>
-
-                      {/* AI Analyses */}
-                      <div>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-muted-foreground">Analyses IA ce mois</span>
-                          <span className="font-medium">
-                            {subscription.currentAIUses} / {subscription.maxAIAnalysesMonth === 999999 ? "∞" : subscription.maxAIAnalysesMonth}
-                          </span>
-                        </div>
-                        {subscription.maxAIAnalysesMonth !== 999999 && (
-                          <Progress value={(subscription.currentAIUses / subscription.maxAIAnalysesMonth) * 100} className="h-2" />
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Promo Code Used */}
-                  {subscription.promoCodeUsed && (
-                    <div className="pt-4 border-t">
-                      <p className="text-sm text-muted-foreground">
-                        Code promo actif : <span className="font-medium">{subscription.promoCodeUsed}</span>
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Upgrade Options */}
-              {!subscription.plan.includes("ENTERPRISE") && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Passer à un plan supérieur</CardTitle>
+                    <CardTitle>Selectif est 100% gratuit</CardTitle>
                     <CardDescription>
-                      Débloquez plus de fonctionnalités et augmentez vos limites
+                      Toutes les fonctionnalités sont accessibles à tous, sans limite
                     </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {subscription.plan === "COMPANY_FREE" && (
-                      <>
-                        <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                          onClick={() => window.location.href = "/pricing"}
-                        >
-                          <Zap className="w-4 h-4 mr-2" />
-                          Passer à Business (39€/mois)
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => window.location.href = "/pricing"}
-                        >
-                          <Crown className="w-4 h-4 mr-2" />
-                          Passer à Enterprise (199€/mois)
-                        </Button>
-                      </>
-                    )}
-
-                    {subscription.plan === "COMPANY_BUSINESS" && (
-                      <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700"
-                        onClick={() => window.location.href = "/pricing"}
-                      >
-                        <Crown className="w-4 h-4 mr-2" />
-                        Passer à Enterprise (199€/mois)
-                      </Button>
-                    )}
-
-                    {subscription.plan === "CANDIDATE_FREE" && (
-                      <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        onClick={() => window.location.href = "/pricing"}
-                      >
-                        <Zap className="w-4 h-4 mr-2" />
-                        Passer à Premium (10$/mois)
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+                {user?.subscription?.donorBadge && (
+                  <DonorBadge badge={user.subscription.donorBadge as DonorBadgeType} />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Features - All Free */}
+              {subscription && (
+                <div>
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-green-600" />
+                    Fonctionnalités incluses gratuitement:
+                  </p>
+                  <ul className="space-y-2">
+                    {subscription.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
-              {/* Promo Code */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Code promo</CardTitle>
-                  <CardDescription>
-                    Entrez un code promo pour bénéficier d'une réduction
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="LAUNCH2024"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      disabled={applyingPromo}
-                      className="uppercase"
-                    />
-                    <Button
-                      onClick={applyPromo}
-                      disabled={applyingPromo || !promoCode.trim()}
-                    >
-                      {applyingPromo ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        "Appliquer"
-                      )}
-                    </Button>
+              {/* Total Donated */}
+              {donationStats && donationStats.totalDonated > 0 && (
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total de vos dons</span>
+                    <span className="text-lg font-bold text-pink-600">
+                      {donationStats.totalDonated.toLocaleString("fr-FR")} FCFA
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Merci pour votre soutien ! 💖
+                  </p>
+                </div>
+              )}
 
-              {/* Billing Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informations de facturation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Période actuelle</span>
-                    <span className="font-medium">
-                      Jusqu'au {new Date(subscription.currentPeriodEnd).toLocaleDateString("fr-FR")}
-                    </span>
+              {/* CTA Donation */}
+              <div className="pt-4">
+                <Button
+                  className="w-full bg-pink-600 hover:bg-pink-700"
+                  onClick={() => window.location.href = "/donate"}
+                >
+                  <Heart className="w-4 h-4 mr-2" />
+                  {donationStats && donationStats.totalDonated > 0 ? "Faire un nouveau don" : "Soutenir Selectif"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Donation History */}
+          {donations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Historique des donations</CardTitle>
+                <CardDescription>
+                  Vos contributions à Selectif
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {donations.map((donation: any) => (
+                    <div
+                      key={donation.id}
+                      className="flex items-center justify-between pb-3 border-b last:border-0 last:pb-0"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-sm">
+                            {new Date(donation.createdAt).toLocaleDateString("fr-FR")}
+                          </p>
+                          <Badge
+                            variant={donation.status === "COMPLETED" ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {donation.status === "COMPLETED" ? "Complété" : donation.status === "PENDING" ? "En attente" : "Échoué"}
+                          </Badge>
+                        </div>
+                        {donation.message && (
+                          <p className="text-xs text-muted-foreground italic">"{donation.message}"</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-pink-600">
+                          {donation.amount.toLocaleString("fr-FR")} FCFA
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Why Donate */}
+          {donations.length === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pourquoi soutenir Selectif ?</CardTitle>
+                <CardDescription>
+                  Votre générosité nous permet de:
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-2">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Mode de paiement</span>
-                    <span className="font-medium">
-                      {subscription.price === 0 ? "Aucun" : "À configurer"}
-                    </span>
+                  <div>
+                    <p className="text-sm font-medium">Maintenir l'application gratuite</p>
+                    <p className="text-xs text-muted-foreground">
+                      Tous les utilisateurs ont accès à toutes les fonctionnalités, sans exception
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-2">
+                    <Zap className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Couvrir les coûts serveurs</p>
+                    <p className="text-xs text-muted-foreground">
+                      Hébergement, base de données, APIs IA (~50 000 FCFA/mois)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/20 p-2">
+                    <Crown className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Ajouter de nouvelles fonctionnalités</p>
+                    <p className="text-xs text-muted-foreground">
+                      Améliorer continuellement l'expérience pour tous
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
