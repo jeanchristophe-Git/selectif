@@ -8,7 +8,7 @@ import { useUIStore } from "@/stores/use-ui-store"
  * Se synchronise automatiquement avec le store UI
  */
 export function useNotifications() {
-  const { setNotificationsCount } = useUIStore()
+  const { setNotificationCount } = useUIStore()
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -16,7 +16,7 @@ export function useNotifications() {
         const response = await fetch("/api/notifications")
         if (response.ok) {
           const data = await response.json()
-          setNotificationsCount(data.unreadCount || 0)
+          setNotificationCount(data.unreadCount || 0)
         }
       } catch (error) {
         console.error("Failed to fetch notifications:", error)
@@ -28,7 +28,7 @@ export function useNotifications() {
     // Refresh every 30 seconds
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
-  }, [setNotificationsCount])
+  }, [setNotificationCount])
 
   const markAllAsRead = async () => {
     try {
@@ -36,7 +36,7 @@ export function useNotifications() {
         method: "PATCH",
       })
       if (response.ok) {
-        setNotificationsCount(0)
+        setNotificationCount(0)
       }
     } catch (error) {
       console.error("Failed to mark notifications as read:", error)

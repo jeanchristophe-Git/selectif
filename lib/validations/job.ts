@@ -15,7 +15,7 @@ export const jobOfferSchema = z.object({
     .max(3000, "Les exigences ne peuvent pas dépasser 3000 caractères"),
   location: z.string().optional(),
   jobType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "INTERNSHIP", "FREELANCE"], {
-    required_error: "Le type de contrat est requis",
+    message: "Le type de contrat est requis",
   }),
   salaryRange: z.string().optional(),
   interviewSlots: z

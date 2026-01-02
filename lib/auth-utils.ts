@@ -13,6 +13,10 @@ export interface SessionUser {
   userType: string
   role: string
   onboardingCompleted: boolean
+  subscription?: {
+    plan: string
+    status: string
+  }
 }
 
 // Hash un mot de passe

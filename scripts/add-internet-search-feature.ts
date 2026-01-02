@@ -1,62 +1,18 @@
+// DEPRECATED: This script is no longer needed as the PricingPlan model has been replaced
+// with a Subscription model that uses SubscriptionPlan enum.
+// The internetJobSearch feature should be configured directly in the Subscription model.
+
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log("🚀 Ajout de la fonctionnalité 'internetJobSearch' aux plans premium...")
+  console.log("⚠️ This script is deprecated and no longer functional.")
+  console.log("The PricingPlan model has been removed from the schema.")
+  console.log("Please use the Subscription model directly to manage plan features.")
 
-  // Récupérer le plan Premium Candidat
-  const premiumCandidatePlan = await prisma.pricingPlan.findFirst({
-    where: {
-      name: "PREMIUM_CANDIDATE",
-      type: "CANDIDATE",
-    },
-  })
-
-  if (premiumCandidatePlan) {
-    // Ajouter la fonctionnalité internetJobSearch
-    const updatedFeatures = {
-      ...premiumCandidatePlan.features,
-      internetJobSearch: true,
-    }
-
-    await prisma.pricingPlan.update({
-      where: { id: premiumCandidatePlan.id },
-      data: {
-        features: updatedFeatures,
-      },
-    })
-
-    console.log("✅ Fonctionnalité ajoutée au plan Premium Candidat")
-  } else {
-    console.log("⚠️ Plan Premium Candidat non trouvé")
-  }
-
-  // Optionnel: Ajouter aussi aux plans Enterprise Entreprise
-  const enterprisePlans = await prisma.pricingPlan.findMany({
-    where: {
-      type: "COMPANY",
-      name: "ENTERPRISE_COMPANY",
-    },
-  })
-
-  for (const plan of enterprisePlans) {
-    const updatedFeatures = {
-      ...plan.features,
-      internetJobSearch: true,
-    }
-
-    await prisma.pricingPlan.update({
-      where: { id: plan.id },
-      data: {
-        features: updatedFeatures,
-      },
-    })
-
-    console.log(`✅ Fonctionnalité ajoutée au plan ${plan.displayName}`)
-  }
-
-  console.log("✨ Migration terminée!")
+  // If you need to enable features for subscriptions, update the Subscription model
+  // or add logic to your application to check the subscription plan type
 }
 
 main()

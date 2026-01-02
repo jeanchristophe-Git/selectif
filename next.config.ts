@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Disable Turbopack for build to avoid Windows symlink issues
-  experimental: {
-    turbo: undefined,
+  // Configuration for production builds
+  webpack: (config) => {
+    return config;
   },
 };
 

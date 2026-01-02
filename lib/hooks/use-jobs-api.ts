@@ -15,20 +15,21 @@ export function useJobsAPI() {
     updateJob,
     deleteJob: deleteJobStore,
     setLoading,
-    filters,
+    statusFilter,
+    searchQuery,
   } = useJobsStore()
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
     fetchJobs()
-  }, [filters.status, filters.search])
+  }, [statusFilter, searchQuery])
 
   const fetchJobs = async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
-      if (filters.status !== "ALL") params.append("status", filters.status)
-      if (filters.search) params.append("search", filters.search)
+      if (statusFilter !== "ALL") params.append("status", statusFilter)
+      if (searchQuery) params.append("search", searchQuery)
 
       const response = await fetch(`/api/jobs?${params}`)
       if (!response.ok) throw new Error("Failed to fetch jobs")

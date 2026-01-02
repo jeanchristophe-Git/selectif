@@ -10,7 +10,7 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
   confirmPassword: z.string(),
   userType: z.enum(["COMPANY", "CANDIDATE"], {
-    required_error: "Veuillez sélectionner un type d'utilisateur",
+    message: "Veuillez sélectionner un type d'utilisateur",
   }),
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
 }).refine((data) => data.password === data.confirmPassword, {

@@ -2,9 +2,10 @@
 
 import { useEffect } from "react"
 import { useUserStore } from "@/stores/use-user-store"
+import type { SessionUser } from "@/lib/auth-utils"
 
 interface UseSessionReturn {
-  user: ReturnType<typeof useUserStore>['user']
+  user: SessionUser | null
   loading: boolean
   refetch: () => Promise<void>
   logout: () => void
